@@ -16,7 +16,9 @@ mod tolerance;
 pub use decimal::Decimal;
 pub use error::{ArithmeticError, ParseError};
 pub use rounding::RoundingMode;
-pub use tolerance::{approx_eq, approx_eq_relative, approx_eq_ulps, within_basis_points, within_percentage};
+pub use tolerance::{
+    approx_eq, approx_eq_relative, approx_eq_ulps, within_basis_points, within_percentage,
+};
 
 #[cfg(feature = "proptest")]
 mod proptest_impl;

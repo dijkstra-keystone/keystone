@@ -150,7 +150,7 @@ mod tests {
         let b = Decimal::from(100i64);
         // 100 bps of 100 = 1.0, difference is 0.10, so within 100 bps
         assert!(within_basis_points(a, b, Decimal::from(100i64))); // within 100 bps (1%)
-        // 5 bps of 100 = 0.05, difference is 0.10, so NOT within 5 bps
+                                                                   // 5 bps of 100 = 0.05, difference is 0.10, so NOT within 5 bps
         assert!(!within_basis_points(a, b, Decimal::from(5i64))); // not within 5 bps
     }
 
