@@ -1,0 +1,38 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/precision-core",
+    "crates/financial-calc",
+    "crates/risk-metrics",
+    "crates/wasm-bindings",
+]
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/dijkstra-keystone/keystone"
+authors = ["Dijkstra Keystone <engineering@dijkstrakeystone.com>"]
+rust-version = "1.70"
+keywords = ["decimal", "financial", "precision", "arithmetic", "defi"]
+categories = ["mathematics", "finance", "no-std"]
+
+[workspace.dependencies]
+rust_decimal = { version = "1", default-features = false, features = ["maths", "serde"] }
+postcard = { version = "1", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive"] }
+proptest = "1"
+libm = "0.2"
+criterion = "0.5"
+num-traits = { version = "0.2", default-features = false, features = ["libm"] }
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+overflow-checks = true
+
+[profile.dev]
+overflow-checks = true

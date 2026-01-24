@@ -1,0 +1,26 @@
+[package]
+name = "keystone-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "WASM bindings for Keystone financial computation"
+readme = "README.md"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+
+[dependencies]
+precision-core = { path = "../precision-core", version = "0.1.0-alpha.1" }
+financial-calc = { path = "../financial-calc", version = "0.1.0-alpha.1" }
+risk-metrics = { path = "../risk-metrics", version = "0.1.0-alpha.1" }
+wasm-bindgen = "0.2"
+serde = { workspace = true }
+serde-wasm-bindgen = "0.6"

@@ -1,0 +1,18 @@
+[book]
+title = "Keystone"
+authors = ["Dijkstra Keystone"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/dijkstra-keystone/keystone"
+edit-url-template = "https://github.com/dijkstra-keystone/keystone/edit/main/docs/{path}"
+
+[output.html.fold]
+enable = true
+level = 1

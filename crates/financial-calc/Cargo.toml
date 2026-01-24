@@ -1,0 +1,23 @@
+[package]
+name = "financial-calc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+keywords.workspace = true
+categories.workspace = true
+description = "Financial calculation functions built on precision-core"
+readme = "README.md"
+
+[features]
+default = []
+std = ["precision-core/std"]
+
+[dependencies]
+precision-core = { path = "../precision-core", version = "0.1.0-alpha.1" }
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
