@@ -33,7 +33,7 @@ jobs:
         run: cargo test --all-features
 
       - name: Build WASM target
-        run: cargo build --target wasm32-unknown-unknown --release -p wasm-bindings
+        run: cargo build --target wasm32-unknown-unknown --release -p keystone-wasm
 
       - name: Security audit
         run: |
