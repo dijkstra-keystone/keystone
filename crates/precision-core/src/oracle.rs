@@ -235,7 +235,7 @@ pub fn convert_decimals_i128(
 /// use precision_core::oracle::{scale_token_amount, OracleDecimals};
 ///
 /// // Convert 1000 USDC (6 decimals) representation to 8 decimals
-/// let usdc_amount = 1000_000_000i64;  // 1000 USDC (6 decimals)
+/// let usdc_amount = 1_000_000_000i64;  // 1000 USDC (6 decimals)
 /// let scaled = scale_token_amount(
 ///     usdc_amount,
 ///     OracleDecimals::Six,
@@ -259,13 +259,13 @@ pub fn scale_token_amount(
 /// use precision_core::oracle::{scale_token_amount_i128, OracleDecimals};
 ///
 /// // Convert 1000 USDC (6 decimals) to 18 decimal representation
-/// let usdc_amount = 1000_000_000i64;  // 1000 USDC
+/// let usdc_amount = 1_000_000_000i64;  // 1000 USDC
 /// let scaled = scale_token_amount_i128(
 ///     usdc_amount,
 ///     OracleDecimals::Six,
 ///     OracleDecimals::Eighteen
 /// ).unwrap();
-/// assert_eq!(scaled, 1000_000_000_000_000_000_000i128);  // 1000 * 10^18
+/// assert_eq!(scaled, 1_000_000_000_000_000_000_000i128);  // 1000 * 10^18
 /// ```
 pub fn scale_token_amount_i128(
     amount: i64,
@@ -429,17 +429,17 @@ mod tests {
 
     #[test]
     fn test_scale_usdc_to_8_decimals() {
-        let usdc = 1000_000_000i64; // 1000 USDC (6 decimals)
+        let usdc = 1_000_000_000i64; // 1000 USDC (6 decimals)
         let scaled = scale_token_amount(usdc, OracleDecimals::Six, OracleDecimals::Eight).unwrap();
         assert_eq!(scaled, 100_000_000_000);
     }
 
     #[test]
     fn test_scale_usdc_to_18_decimals_i128() {
-        let usdc = 1000_000_000i64; // 1000 USDC
+        let usdc = 1_000_000_000i64; // 1000 USDC
         let scaled =
             scale_token_amount_i128(usdc, OracleDecimals::Six, OracleDecimals::Eighteen).unwrap();
-        assert_eq!(scaled, 1000_000_000_000_000_000_000i128);
+        assert_eq!(scaled, 1_000_000_000_000_000_000_000i128);
     }
 
     #[test]
