@@ -3,6 +3,8 @@
 //! These tests verify that calculations produce identical results across platforms
 //! by checking against known test vectors.
 
+extern crate alloc;
+
 use precision_core::{Decimal, RoundingMode};
 
 /// Test vectors with known outputs that must match across all platforms.
@@ -189,7 +191,6 @@ fn string_roundtrip_determinism() {
     ];
 
     for &value in &values {
-        extern crate alloc;
         use alloc::string::ToString;
 
         let s = value.to_string();
@@ -203,4 +204,133 @@ fn string_roundtrip_determinism() {
             s
         );
     }
+}
+
+/// Transcendental function determinism test.
+/// Verifies sqrt, exp, and ln produce consistent results across platforms.
+/// These tests use approximate equality because transcendental implementations
+/// may have minor precision differences, but results must be within acceptable bounds.
+const TRANSCENDENTAL_INPUTS: &[&str] = &["1.0", "4.0", "2.0", "0.25", "100.0", "0.01", "0.5", "10.0"];
+
+#[test]
+fn transcendental_determinism() {
+    // Tolerance: 1e-7 (7 decimal places of agreement)
+    // Transcendental functions use Taylor series which accumulates error across
+    // chained operations like exp(ln(x))
+    let tolerance = Decimal::new(1, 7);
+
+    for input_str in TRANSCENDENTAL_INPUTS {
+        let input: Decimal = input_str.parse().unwrap();
+
+        // sqrt is exact for perfect squares, approximate otherwise
+        let sqrt_result = input.try_sqrt();
+        assert!(sqrt_result.is_ok(), "sqrt({}) should succeed", input_str);
+        let sqrt = sqrt_result.unwrap();
+        // Verify sqrt^2 ≈ input (roundtrip check)
+        let squared = sqrt.checked_mul(sqrt).unwrap();
+        let diff = (squared - input).abs();
+        assert!(
+            diff < tolerance,
+            "sqrt({})^2 = {} (expected {}, diff = {})",
+            input_str,
+            squared,
+            input,
+            diff
+        );
+
+        // exp / ln inverse relationship: exp(ln(x)) ≈ x for positive x
+        if input > Decimal::ZERO {
+            if let Ok(ln_val) = input.try_ln() {
+                if let Ok(exp_ln) = ln_val.try_exp() {
+                    let diff = (exp_ln - input).abs();
+                    assert!(
+                        diff < tolerance,
+                        "exp(ln({})) = {} (expected {}, diff = {})",
+                        input_str,
+                        exp_ln,
+                        input,
+                        diff
+                    );
+                }
+            }
+        }
+
+        // ln(exp(x)) ≈ x for small x (where exp doesn't overflow)
+        if input.abs() < Decimal::from(5i64) {
+            if let Ok(exp_val) = input.try_exp() {
+                if let Ok(ln_exp) = exp_val.try_ln() {
+                    let diff = (ln_exp - input).abs();
+                    assert!(
+                        diff < tolerance,
+                        "ln(exp({})) = {} (expected {}, diff = {})",
+                        input_str,
+                        ln_exp,
+                        input,
+                        diff
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// Binary representation determinism.
+/// Verifies that to_parts() produces identical (mantissa, scale) across platforms.
+const PARTS_VECTORS: &[(&str, i128, u32)] = &[
+    ("0", 0, 0),
+    ("1", 1, 0),
+    ("-1", -1, 0),
+    ("100", 100, 0),
+    ("0.01", 1, 2),
+    ("123.456", 123456, 3),
+    ("-999.999", -999999, 3),
+    ("0.000001", 1, 6),
+];
+
+#[test]
+fn binary_representation_determinism() {
+    for (value_str, expected_mantissa, expected_scale) in PARTS_VECTORS {
+        let value: Decimal = value_str.parse().unwrap();
+        let (mantissa, scale) = value.to_parts();
+
+        assert_eq!(
+            mantissa, *expected_mantissa,
+            "Mantissa mismatch for {}: got {}, expected {}",
+            value_str, mantissa, expected_mantissa
+        );
+        assert_eq!(
+            scale, *expected_scale,
+            "Scale mismatch for {}: got {}, expected {}",
+            value_str, scale, expected_scale
+        );
+    }
+}
+
+/// Oracle conversion determinism.
+/// Verifies oracle module functions produce consistent results.
+#[test]
+fn oracle_conversion_determinism() {
+    use precision_core::oracle::{normalize_oracle_price, OracleDecimals};
+
+    // Chainlink BTC/USD price: $50,000.12345678 with 8 decimals
+    let btc_raw = 5000012345678i64;
+    let btc_price = normalize_oracle_price(btc_raw, OracleDecimals::Eight).unwrap();
+    let expected: Decimal = "50000.12345678".parse().unwrap();
+    assert_eq!(
+        btc_price, expected,
+        "BTC price normalization: {} != {}",
+        btc_price, expected
+    );
+
+    // USDC amount: 1000.50 with 6 decimals
+    let usdc_raw = 1000500000i64;
+    let usdc_amount = normalize_oracle_price(usdc_raw, OracleDecimals::Six).unwrap();
+    let expected_usdc: Decimal = "1000.5".parse().unwrap();
+    assert_eq!(
+        usdc_amount.normalize(),
+        expected_usdc.normalize(),
+        "USDC normalization: {} != {}",
+        usdc_amount,
+        expected_usdc
+    );
 }

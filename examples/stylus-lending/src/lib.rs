@@ -3,12 +3,14 @@
 //! Demonstrates using Keystone precision arithmetic in a Stylus smart contract
 //! for DeFi lending calculations with deterministic results.
 
-#![cfg_attr(not(feature = "export-abi"), no_main, no_std)]
+#![cfg_attr(not(any(test, feature = "export-abi")), no_main)]
+#![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
 extern crate alloc;
 
 use alloc::vec::Vec;
 use precision_core::{Decimal, RoundingMode};
-use stylus_sdk::{alloy_primitives::U256, prelude::*, storage::*};
+use alloy_primitives::U256;
+use stylus_sdk::prelude::*;
 
 sol_storage! {
     #[entrypoint]
@@ -20,18 +22,25 @@ sol_storage! {
     }
 }
 
-/// Convert U256 to Decimal (assumes 18 decimals)
+/// Convert U256 to Decimal (assumes 18 decimals, scaled to 1e18)
 fn u256_to_decimal(value: U256) -> Decimal {
-    let bytes = value.to_le_bytes::<32>();
-    let mantissa = i128::from_le_bytes(bytes[0..16].try_into().unwrap());
-    Decimal::new(mantissa, 18)
+    // Extract lower 128 bits (sufficient for most DeFi values)
+    let lo: u128 = value.as_limbs()[0] as u128 | ((value.as_limbs()[1] as u128) << 64);
+    // Create decimal and apply 18 decimal scaling
+    let raw = Decimal::from(lo);
+    raw.checked_div(Decimal::from(1_000_000_000_000_000_000u64))
+        .unwrap_or(Decimal::MAX)
 }
 
-/// Convert Decimal to U256 (assumes 18 decimals)
+/// Convert Decimal to U256 (returns value scaled to 1e18)
 fn decimal_to_u256(value: Decimal) -> U256 {
-    let scaled = value.round(18, RoundingMode::TowardZero);
+    // Scale up by 1e18 and round
+    let scaled = value
+        .checked_mul(Decimal::from(1_000_000_000_000_000_000u64))
+        .unwrap_or(Decimal::MAX)
+        .round(0, RoundingMode::TowardZero);
     let (mantissa, _scale) = scaled.to_parts();
-    U256::from(mantissa as u128)
+    U256::from(mantissa.unsigned_abs())
 }
 
 #[public]

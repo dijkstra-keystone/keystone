@@ -5,6 +5,7 @@ members = [
     "crates/financial-calc",
     "crates/risk-metrics",
     "crates/wasm-bindings",
+    "backend",
 ]
 
 [workspace.package]

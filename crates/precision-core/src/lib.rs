@@ -7,9 +7,15 @@
 //! This crate provides [`Decimal`], a 128-bit decimal type with configurable
 //! rounding modes designed for financial calculations that must produce
 //! identical results across all platforms.
+//!
+//! # Oracle Integration
+//!
+//! The [`oracle`] module provides utilities for working with different oracle
+//! decimal formats (Chainlink, Pyth, etc.) commonly used in DeFi applications.
 
 mod decimal;
 mod error;
+pub mod oracle;
 mod rounding;
 mod tolerance;
 

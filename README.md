@@ -14,9 +14,19 @@ Keystone provides a suite of libraries for financial calculations with guarantee
 | Crate | Description |
 |-------|-------------|
 | [precision-core](crates/precision-core) | 128-bit decimal arithmetic with 7 rounding modes |
-| [financial-calc](crates/financial-calc) | Interest, time value, and percentage calculations |
+| [financial-calc](crates/financial-calc) | Interest, time value, options pricing, percentages |
 | [risk-metrics](crates/risk-metrics) | Health factor, liquidation, and position metrics |
 | [keystone-wasm](crates/wasm-bindings) | WebAssembly bindings for browser usage |
+
+## Stylus Examples
+
+Ready-to-deploy examples for Arbitrum Stylus:
+
+| Example | Description |
+|---------|-------------|
+| [stylus-lending](examples/stylus-lending) | Health factor and liquidation calculations |
+| [stylus-amm](examples/stylus-amm) | Constant product AMM math |
+| [stylus-vault](examples/stylus-vault) | ERC4626-style vault calculations |
 
 ## Features
 

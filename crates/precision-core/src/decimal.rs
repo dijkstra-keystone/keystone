@@ -7,6 +7,7 @@ use core::fmt;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 use core::str::FromStr;
 use num_traits::Signed;
+use rust_decimal::prelude::MathematicalOps;
 use rust_decimal::Decimal as RustDecimal;
 use serde::{Deserialize, Serialize};
 
@@ -66,6 +67,15 @@ impl Decimal {
     #[must_use]
     pub const fn from_parts(lo: u32, mid: u32, hi: u32, negative: bool, scale: u32) -> Self {
         Self(RustDecimal::from_parts(lo, mid, hi, negative, scale))
+    }
+
+    /// Creates a decimal from a 128-bit integer.
+    ///
+    /// Returns an error if the value is too large to represent.
+    pub fn try_from_i128(value: i128) -> Result<Self, ArithmeticError> {
+        RustDecimal::try_from_i128_with_scale(value, 0)
+            .map(Self)
+            .map_err(|_| ArithmeticError::Overflow)
     }
 
     /// Returns the mantissa as a 128-bit integer and the scale.
@@ -273,6 +283,244 @@ impl Decimal {
     #[must_use]
     pub fn from_inner(inner: RustDecimal) -> Self {
         Self(inner)
+    }
+
+    // ========================================================================
+    // Transcendental Functions (for Black-Scholes and advanced financial math)
+    // ========================================================================
+
+    /// Computes the square root.
+    ///
+    /// Returns `None` if the value is negative.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use precision_core::Decimal;
+    ///
+    /// let x = Decimal::from(4i64);
+    /// assert_eq!(x.sqrt(), Some(Decimal::from(2i64)));
+    ///
+    /// let neg = Decimal::from(-1i64);
+    /// assert_eq!(neg.sqrt(), None);
+    /// ```
+    #[must_use]
+    pub fn sqrt(self) -> Option<Self> {
+        if self.is_negative() {
+            return None;
+        }
+        self.0.sqrt().map(Self)
+    }
+
+    /// Computes the square root, returning an error for negative inputs.
+    pub fn try_sqrt(self) -> Result<Self, ArithmeticError> {
+        if self.is_negative() {
+            return Err(ArithmeticError::NegativeSqrt);
+        }
+        self.sqrt().ok_or(ArithmeticError::Overflow)
+    }
+
+    /// Computes e^self (the exponential function).
+    ///
+    /// Returns `None` on overflow.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use precision_core::Decimal;
+    ///
+    /// let x = Decimal::ZERO;
+    /// assert_eq!(x.exp(), Some(Decimal::ONE));
+    /// ```
+    #[must_use]
+    pub fn exp(self) -> Option<Self> {
+        // rust_decimal's exp() can overflow, so we need to catch panics
+        // or check bounds. For safety, we use checked_exp if available.
+        // Since rust_decimal 1.x exp() returns Decimal directly, we wrap in Option.
+
+        // Check for extreme values that would overflow
+        // e^710 is approximately the max for f64, our Decimal has similar limits
+        if self > Self::from(100i64) {
+            return None; // Would overflow
+        }
+        if self < Self::from(-100i64) {
+            return Some(Self::ZERO); // Underflows to effectively zero
+        }
+
+        Some(Self(self.0.exp()))
+    }
+
+    /// Computes e^self, returning an error on overflow.
+    pub fn try_exp(self) -> Result<Self, ArithmeticError> {
+        self.exp().ok_or(ArithmeticError::Overflow)
+    }
+
+    /// Computes the natural logarithm (ln).
+    ///
+    /// Returns `None` if the value is not positive.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use precision_core::Decimal;
+    /// use core::str::FromStr;
+    ///
+    /// let e = Decimal::from_str("2.718281828459045").unwrap();
+    /// let ln_e = e.ln().unwrap();
+    /// // ln(e) ≈ 1
+    /// assert!((ln_e - Decimal::ONE).abs() < Decimal::from_str("0.0001").unwrap());
+    /// ```
+    #[must_use]
+    pub fn ln(self) -> Option<Self> {
+        if !self.is_positive() {
+            return None;
+        }
+        Some(Self(self.0.ln()))
+    }
+
+    /// Computes the natural logarithm, returning an error for non-positive inputs.
+    pub fn try_ln(self) -> Result<Self, ArithmeticError> {
+        if self.is_zero() {
+            return Err(ArithmeticError::LogOfZero);
+        }
+        if self.is_negative() {
+            return Err(ArithmeticError::LogOfNegative);
+        }
+        self.ln().ok_or(ArithmeticError::Overflow)
+    }
+
+    /// Computes the base-10 logarithm.
+    ///
+    /// Returns `None` if the value is not positive.
+    #[must_use]
+    pub fn log10(self) -> Option<Self> {
+        if !self.is_positive() {
+            return None;
+        }
+        Some(Self(self.0.log10()))
+    }
+
+    /// Computes self^exponent using the formula: x^y = e^(y * ln(x)).
+    ///
+    /// Returns `None` if the computation would fail (e.g., negative base with
+    /// non-integer exponent, or overflow).
+    ///
+    /// Note: For integer exponents, use [`powi`](Self::powi) for exact results.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use precision_core::Decimal;
+    /// use core::str::FromStr;
+    ///
+    /// let base = Decimal::from(2i64);
+    /// let exp = Decimal::from(3i64);
+    /// let result = base.pow(exp).unwrap();
+    /// // Note: small precision loss due to exp/ln computation
+    /// let diff = (result - Decimal::from(8i64)).abs();
+    /// assert!(diff < Decimal::from_str("0.001").unwrap());
+    /// ```
+    #[must_use]
+    pub fn pow(self, exponent: Self) -> Option<Self> {
+        // Special cases
+        if exponent.is_zero() {
+            return Some(Self::ONE);
+        }
+        if self.is_zero() {
+            return if exponent.is_positive() {
+                Some(Self::ZERO)
+            } else {
+                None // 0^negative is undefined
+            };
+        }
+        if self == Self::ONE {
+            return Some(Self::ONE);
+        }
+
+        // For negative bases, only integer exponents are supported
+        if self.is_negative() {
+            // Check if exponent is an integer
+            if exponent.floor() != exponent {
+                return None; // Complex result
+            }
+            let abs_base = self.abs();
+            let result = abs_base.ln()?.checked_mul(exponent)?;
+            let exp_result = result.exp()?;
+
+            // Determine sign based on whether exponent is odd
+            let exp_int = exponent.floor();
+            let is_odd = (exp_int / Self::from(2i64)).floor() * Self::from(2i64) != exp_int;
+
+            return Some(if is_odd { -exp_result } else { exp_result });
+        }
+
+        // x^y = e^(y * ln(x))
+        let ln_x = self.ln()?;
+        let product = ln_x.checked_mul(exponent)?;
+        product.exp()
+    }
+
+    /// Computes self^exponent, returning an error on failure.
+    pub fn try_pow(self, exponent: Self) -> Result<Self, ArithmeticError> {
+        self.pow(exponent).ok_or(ArithmeticError::Overflow)
+    }
+
+    /// Computes self^n for integer exponent using repeated squaring.
+    ///
+    /// This is more accurate than `pow()` for integer exponents as it avoids
+    /// the exp/ln computation. Returns `None` on overflow.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use precision_core::Decimal;
+    ///
+    /// let base = Decimal::from(2i64);
+    /// assert_eq!(base.powi(10), Some(Decimal::from(1024i64)));
+    /// ```
+    #[must_use]
+    pub fn powi(self, n: i32) -> Option<Self> {
+        if n == 0 {
+            return Some(Self::ONE);
+        }
+
+        let (mut base, mut exp) = if n < 0 {
+            (Self::ONE.checked_div(self)?, (-n) as u32)
+        } else {
+            (self, n as u32)
+        };
+
+        let mut result = Self::ONE;
+
+        while exp > 0 {
+            if exp & 1 == 1 {
+                result = result.checked_mul(base)?;
+            }
+            base = base.checked_mul(base)?;
+            exp >>= 1;
+        }
+
+        Some(result)
+    }
+
+    /// Computes self^n for integer exponent, returning error on failure.
+    pub fn try_powi(self, n: i32) -> Result<Self, ArithmeticError> {
+        if n < 0 && self.is_zero() {
+            return Err(ArithmeticError::DivisionByZero);
+        }
+        self.powi(n).ok_or(ArithmeticError::Overflow)
+    }
+
+    /// Euler's number e ≈ 2.718281828459045.
+    pub fn e() -> Self {
+        Self::from_str("2.7182818284590452353602874713527")
+            .expect("E constant is valid")
+    }
+
+    /// Pi ≈ 3.141592653589793.
+    pub fn pi() -> Self {
+        Self::from_str("3.1415926535897932384626433832795")
+            .expect("PI constant is valid")
     }
 }
 
@@ -501,5 +749,150 @@ mod tests {
         assert_eq!(Decimal::from(50i64).clamp(min, max), Decimal::from(50i64));
         assert_eq!(Decimal::from(-10i64).clamp(min, max), min);
         assert_eq!(Decimal::from(150i64).clamp(min, max), max);
+    }
+
+    // ========================================================================
+    // Transcendental Function Tests
+    // ========================================================================
+
+    #[test]
+    fn sqrt_perfect_squares() {
+        assert_eq!(Decimal::from(4i64).sqrt(), Some(Decimal::from(2i64)));
+        assert_eq!(Decimal::from(9i64).sqrt(), Some(Decimal::from(3i64)));
+        assert_eq!(Decimal::from(16i64).sqrt(), Some(Decimal::from(4i64)));
+        assert_eq!(Decimal::from(100i64).sqrt(), Some(Decimal::from(10i64)));
+        assert_eq!(Decimal::ZERO.sqrt(), Some(Decimal::ZERO));
+        assert_eq!(Decimal::ONE.sqrt(), Some(Decimal::ONE));
+    }
+
+    #[test]
+    fn sqrt_negative_returns_none() {
+        assert_eq!(Decimal::from(-1i64).sqrt(), None);
+        assert_eq!(Decimal::from(-100i64).sqrt(), None);
+    }
+
+    #[test]
+    fn sqrt_non_perfect() {
+        let sqrt2 = Decimal::from(2i64).sqrt().unwrap();
+        // sqrt(2) ≈ 1.414213...
+        let expected = Decimal::from_str("1.4142135623730951").unwrap();
+        let diff = (sqrt2 - expected).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn exp_basic() {
+        // e^0 = 1
+        assert_eq!(Decimal::ZERO.exp(), Some(Decimal::ONE));
+
+        // e^1 ≈ 2.718...
+        let e = Decimal::ONE.exp().unwrap();
+        let expected = Decimal::e();
+        let diff = (e - expected).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn exp_overflow_protection() {
+        // Very large exponent should return None (overflow)
+        assert_eq!(Decimal::from(200i64).exp(), None);
+
+        // Very negative exponent should return zero (underflow to zero)
+        let result = Decimal::from(-200i64).exp();
+        assert_eq!(result, Some(Decimal::ZERO));
+    }
+
+    #[test]
+    fn ln_basic() {
+        // ln(1) = 0
+        assert_eq!(Decimal::ONE.ln(), Some(Decimal::ZERO));
+
+        // ln(e) ≈ 1
+        let e = Decimal::e();
+        let ln_e = e.ln().unwrap();
+        let diff = (ln_e - Decimal::ONE).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn ln_invalid_inputs() {
+        // ln(0) is undefined
+        assert_eq!(Decimal::ZERO.ln(), None);
+
+        // ln(negative) is undefined (in reals)
+        assert_eq!(Decimal::from(-1i64).ln(), None);
+    }
+
+    #[test]
+    fn exp_ln_inverse() {
+        // exp(ln(x)) = x
+        let x = Decimal::from(5i64);
+        let result = x.ln().unwrap().exp().unwrap();
+        let diff = (result - x).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+
+        // ln(exp(x)) = x
+        let y = Decimal::from(2i64);
+        let result2 = y.exp().unwrap().ln().unwrap();
+        let diff2 = (result2 - y).abs();
+        assert!(diff2 < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn pow_basic() {
+        // 2^3 ≈ 8 (small precision loss due to exp/ln)
+        let result = Decimal::from(2i64).pow(Decimal::from(3i64)).unwrap();
+        let diff = (result - Decimal::from(8i64)).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+
+        // x^0 = 1
+        assert_eq!(
+            Decimal::from(100i64).pow(Decimal::ZERO),
+            Some(Decimal::ONE)
+        );
+
+        // x^1 ≈ x
+        let result2 = Decimal::from(42i64).pow(Decimal::ONE).unwrap();
+        let diff2 = (result2 - Decimal::from(42i64)).abs();
+        assert!(diff2 < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn pow_fractional_exponent() {
+        // 4^0.5 = 2 (square root)
+        let result = Decimal::from(4i64)
+            .pow(Decimal::from_str("0.5").unwrap())
+            .unwrap();
+        let diff = (result - Decimal::from(2i64)).abs();
+        assert!(diff < Decimal::from_str("0.0001").unwrap());
+    }
+
+    #[test]
+    fn constants() {
+        // Verify constants are reasonable
+        let e = Decimal::e();
+        assert!(e > Decimal::from(2i64));
+        assert!(e < Decimal::from(3i64));
+
+        let pi = Decimal::pi();
+        assert!(pi > Decimal::from(3i64));
+        assert!(pi < Decimal::from(4i64));
+    }
+
+    #[test]
+    fn powi_exact() {
+        // Integer powers should be exact
+        assert_eq!(Decimal::from(2i64).powi(0), Some(Decimal::ONE));
+        assert_eq!(Decimal::from(2i64).powi(1), Some(Decimal::from(2i64)));
+        assert_eq!(Decimal::from(2i64).powi(2), Some(Decimal::from(4i64)));
+        assert_eq!(Decimal::from(2i64).powi(3), Some(Decimal::from(8i64)));
+        assert_eq!(Decimal::from(2i64).powi(10), Some(Decimal::from(1024i64)));
+
+        // Negative exponents
+        let half = Decimal::from(2i64).powi(-1).unwrap();
+        assert_eq!(half, Decimal::from_str("0.5").unwrap());
+
+        let quarter = Decimal::from(2i64).powi(-2).unwrap();
+        assert_eq!(quarter, Decimal::from_str("0.25").unwrap());
     }
 }

@@ -1,5 +1,5 @@
 [package]
-name = "stylus-lending-example"
+name = "stylus-vault-example"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 precision-core = { path = "../../crates/precision-core", default-features = false }
-risk-metrics = { path = "../../crates/risk-metrics", default-features = false }
+financial-calc = { path = "../../crates/financial-calc", default-features = false }
 stylus-sdk = "0.10"
 alloy-primitives = "1.3"
 
@@ -20,7 +20,7 @@ export-abi = ["stylus-sdk/export-abi"]
 crate-type = ["lib", "cdylib"]
 
 [[bin]]
-name = "stylus-lending-example"
+name = "stylus-vault-example"
 path = "src/main.rs"
 
 [profile.release]

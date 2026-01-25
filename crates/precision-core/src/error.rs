@@ -14,6 +14,12 @@ pub enum ArithmeticError {
     DivisionByZero,
     /// Scale exceeds maximum precision.
     ScaleExceeded,
+    /// Square root of negative number attempted.
+    NegativeSqrt,
+    /// Logarithm of zero attempted.
+    LogOfZero,
+    /// Logarithm of negative number attempted.
+    LogOfNegative,
 }
 
 impl fmt::Display for ArithmeticError {
@@ -23,6 +29,9 @@ impl fmt::Display for ArithmeticError {
             Self::Underflow => write!(f, "arithmetic underflow"),
             Self::DivisionByZero => write!(f, "division by zero"),
             Self::ScaleExceeded => write!(f, "scale exceeds maximum precision"),
+            Self::NegativeSqrt => write!(f, "square root of negative number"),
+            Self::LogOfZero => write!(f, "logarithm of zero"),
+            Self::LogOfNegative => write!(f, "logarithm of negative number"),
         }
     }
 }

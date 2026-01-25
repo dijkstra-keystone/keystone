@@ -1,5 +1,9 @@
 # risk-metrics
 
+[![Crates.io](https://img.shields.io/crates/v/risk-metrics.svg)](https://crates.io/crates/risk-metrics)
+[![Documentation](https://docs.rs/risk-metrics/badge.svg)](https://docs.rs/risk-metrics)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](../../LICENSE-MIT)
+
 Risk metrics and calculations for DeFi applications.
 
 ## Features
@@ -11,7 +15,14 @@ Risk metrics and calculations for DeFi applications.
 - `no_std` compatible
 - Deterministic results
 
-## Usage
+## Installation
+
+```toml
+[dependencies]
+risk-metrics = "0.1"
+```
+
+## Quick Start
 
 ```rust
 use risk_metrics::{health_factor, liquidation_price, Decimal};
@@ -34,19 +45,26 @@ let liq = liquidation_price(
 ## Functions
 
 ### Health
-- `health_factor(collateral, debt, threshold)`
-- `is_healthy(collateral, debt, threshold)`
-- `collateral_ratio(collateral, debt)`
+- `health_factor(collateral, debt, threshold)` - Calculate position health
+- `is_healthy(collateral, debt, threshold)` - Check if position is safe
+- `collateral_ratio(collateral, debt)` - Raw collateralization ratio
 
 ### Liquidation
-- `liquidation_price(collateral_amount, debt, threshold)`
-- `liquidation_threshold(collateral, debt, health_factor)`
-- `max_borrowable(collateral, threshold, min_health_factor)`
+- `liquidation_price(collateral_amount, debt, threshold)` - Price at which liquidation occurs
+- `liquidation_threshold(collateral, debt, health_factor)` - Threshold for given health factor
+- `max_borrowable(collateral, threshold, min_health_factor)` - Maximum safe debt
 
 ### Position
-- `loan_to_value(debt, collateral)`
-- `utilization_rate(borrows, liquidity)`
-- `available_liquidity(total_liquidity, borrows)`
+- `loan_to_value(debt, collateral)` - LTV ratio
+- `utilization_rate(borrows, liquidity)` - Pool utilization
+- `available_liquidity(total_liquidity, borrows)` - Remaining liquidity
+
+## DeFi Protocol Compatibility
+
+Designed for integration with lending protocols:
+- Aave-style health factor calculations
+- Compound-style collateral ratios
+- MakerDAO-style liquidation thresholds
 
 ## License
 

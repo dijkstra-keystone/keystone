@@ -31,6 +31,11 @@
 - [Browser Usage](./wasm/browser.md)
 - [API Reference](./wasm/api.md)
 
+# Stylus (Arbitrum)
+
+- [Integration Guide](./stylus/integration.md)
+- [Example Contracts](./stylus/examples.md)
+
 # Reference
 
 - [Benchmarks](./reference/benchmarks.md)
