@@ -38,7 +38,9 @@ impl OracleDecimals {
     /// Get the scale factor (10^decimals).
     pub fn scale_factor(self) -> Decimal {
         let decimals = self.value();
-        Decimal::from(10i64).powi(decimals as i32).unwrap_or(Decimal::MAX)
+        Decimal::from(10i64)
+            .powi(decimals as i32)
+            .unwrap_or(Decimal::MAX)
     }
 }
 
@@ -368,9 +370,13 @@ pub fn normalize_pyth_price(price: i64, exponent: i32) -> Result<Decimal, Arithm
         .ok_or(ArithmeticError::Overflow)?;
 
     if exponent > 0 {
-        price_dec.checked_mul(scale).ok_or(ArithmeticError::Overflow)
+        price_dec
+            .checked_mul(scale)
+            .ok_or(ArithmeticError::Overflow)
     } else {
-        price_dec.checked_div(scale).ok_or(ArithmeticError::DivisionByZero)
+        price_dec
+            .checked_div(scale)
+            .ok_or(ArithmeticError::DivisionByZero)
     }
 }
 
@@ -424,8 +430,7 @@ mod tests {
     #[test]
     fn test_scale_usdc_to_8_decimals() {
         let usdc = 1000_000_000i64; // 1000 USDC (6 decimals)
-        let scaled =
-            scale_token_amount(usdc, OracleDecimals::Six, OracleDecimals::Eight).unwrap();
+        let scaled = scale_token_amount(usdc, OracleDecimals::Six, OracleDecimals::Eight).unwrap();
         assert_eq!(scaled, 100_000_000_000);
     }
 

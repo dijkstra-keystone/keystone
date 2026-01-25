@@ -513,14 +513,12 @@ impl Decimal {
 
     /// Euler's number e ≈ 2.718281828459045.
     pub fn e() -> Self {
-        Self::from_str("2.7182818284590452353602874713527")
-            .expect("E constant is valid")
+        Self::from_str("2.7182818284590452353602874713527").expect("E constant is valid")
     }
 
     /// Pi ≈ 3.141592653589793.
     pub fn pi() -> Self {
-        Self::from_str("3.1415926535897932384626433832795")
-            .expect("PI constant is valid")
+        Self::from_str("3.1415926535897932384626433832795").expect("PI constant is valid")
     }
 }
 
@@ -846,10 +844,7 @@ mod tests {
         assert!(diff < Decimal::from_str("0.0001").unwrap());
 
         // x^0 = 1
-        assert_eq!(
-            Decimal::from(100i64).pow(Decimal::ZERO),
-            Some(Decimal::ONE)
-        );
+        assert_eq!(Decimal::from(100i64).pow(Decimal::ZERO), Some(Decimal::ONE));
 
         // x^1 ≈ x
         let result2 = Decimal::from(42i64).pow(Decimal::ONE).unwrap();

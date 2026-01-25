@@ -85,17 +85,16 @@ pub fn normal_cdf(x: Decimal) -> Result<Decimal, ArithmeticError> {
     let k = one.try_div(one.try_add(p.try_mul(abs_x)?)?)?;
 
     // Polynomial: a1*k + a2*k² + a3*k³ + a4*k⁴ + a5*k⁵
-    let poly = k.try_mul(
-        a1.try_add(
-            k.try_mul(
-                a2.try_add(k.try_mul(a3.try_add(k.try_mul(a4.try_add(k.try_mul(a5)?)?)?)?)?)?
-            )?
-        )?
-    )?;
+    let poly = k.try_mul(a1.try_add(k.try_mul(
+        a2.try_add(k.try_mul(a3.try_add(k.try_mul(a4.try_add(k.try_mul(a5)?)?)?)?)?)?,
+    )?)?)?;
 
     // Standard normal PDF at x: (1/√(2π)) * exp(-x²/2)
     let two = Decimal::from(2i64);
-    let neg_half_x_sq = abs_x.try_mul(abs_x)?.try_div(two)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let neg_half_x_sq = abs_x
+        .try_mul(abs_x)?
+        .try_div(two)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     let exp_term = neg_half_x_sq.try_exp()?;
 
     let sqrt_two_pi = parse_const("2.5066282746310002"); // √(2π)
@@ -170,7 +169,10 @@ pub fn black_scholes_call(params: &OptionParams) -> Result<Decimal, ArithmeticEr
     let n_d2 = normal_cdf(d2)?;
 
     // Discount factor: e^(-rT)
-    let neg_rt = params.rate.try_mul(params.time)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let neg_rt = params
+        .rate
+        .try_mul(params.time)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     let discount = neg_rt.try_exp()?;
 
     // C = S * N(d1) - K * e^(-rT) * N(d2)
@@ -198,7 +200,10 @@ pub fn black_scholes_put(params: &OptionParams) -> Result<Decimal, ArithmeticErr
     let n_neg_d2 = normal_cdf(-d2)?;
 
     // Discount factor: e^(-rT)
-    let neg_rt = params.rate.try_mul(params.time)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let neg_rt = params
+        .rate
+        .try_mul(params.time)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     let discount = neg_rt.try_exp()?;
 
     // P = K * e^(-rT) * N(-d2) - S * N(-d1)
@@ -232,7 +237,10 @@ pub fn call_greeks(params: &OptionParams) -> Result<Greeks, ArithmeticError> {
     let vega = vega.try_div(Decimal::from(100i64))?;
 
     // Discount factor
-    let neg_rt = params.rate.try_mul(params.time)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let neg_rt = params
+        .rate
+        .try_mul(params.time)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     let discount = neg_rt.try_exp()?;
 
     // Theta = -(S * N'(d1) * σ) / (2√T) - r * K * e^(-rT) * N(d2)
@@ -242,13 +250,23 @@ pub fn call_greeks(params: &OptionParams) -> Result<Greeks, ArithmeticError> {
         .try_mul(n_prime_d1)?
         .try_mul(params.volatility)?
         .try_div(two.try_mul(sqrt_t)?)?;
-    let theta_term2 = params.rate.try_mul(params.strike)?.try_mul(discount)?.try_mul(n_d2)?;
-    let theta = theta_term1.try_add(theta_term2)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let theta_term2 = params
+        .rate
+        .try_mul(params.strike)?
+        .try_mul(discount)?
+        .try_mul(n_d2)?;
+    let theta = theta_term1
+        .try_add(theta_term2)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     // Convert to per-day (divide by 365)
     let theta = theta.try_div(Decimal::from(365i64))?;
 
     // Rho = K * T * e^(-rT) * N(d2)
-    let rho = params.strike.try_mul(params.time)?.try_mul(discount)?.try_mul(n_d2)?;
+    let rho = params
+        .strike
+        .try_mul(params.time)?
+        .try_mul(discount)?
+        .try_mul(n_d2)?;
     // Convert to per 1% move
     let rho = rho.try_div(Decimal::from(100i64))?;
 
@@ -284,7 +302,10 @@ pub fn put_greeks(params: &OptionParams) -> Result<Greeks, ArithmeticError> {
     let vega = vega.try_div(Decimal::from(100i64))?;
 
     // Discount factor
-    let neg_rt = params.rate.try_mul(params.time)?.try_mul(Decimal::NEGATIVE_ONE)?;
+    let neg_rt = params
+        .rate
+        .try_mul(params.time)?
+        .try_mul(Decimal::NEGATIVE_ONE)?;
     let discount = neg_rt.try_exp()?;
 
     // Theta = -(S * N'(d1) * σ) / (2√T) + r * K * e^(-rT) * N(-d2)

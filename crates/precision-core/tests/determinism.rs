@@ -210,7 +210,8 @@ fn string_roundtrip_determinism() {
 /// Verifies sqrt, exp, and ln produce consistent results across platforms.
 /// These tests use approximate equality because transcendental implementations
 /// may have minor precision differences, but results must be within acceptable bounds.
-const TRANSCENDENTAL_INPUTS: &[&str] = &["1.0", "4.0", "2.0", "0.25", "100.0", "0.01", "0.5", "10.0"];
+const TRANSCENDENTAL_INPUTS: &[&str] =
+    &["1.0", "4.0", "2.0", "0.25", "100.0", "0.01", "0.5", "10.0"];
 
 #[test]
 fn transcendental_determinism() {
