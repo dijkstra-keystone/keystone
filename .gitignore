@@ -1,4 +1,5 @@
 /target
+**/target/
 **/*.rs.bk
 *.pdb
 .DS_Store
@@ -11,3 +12,5 @@
 *.crate
 .env
 .env.local
+.secrets/
+Cargo.lock
