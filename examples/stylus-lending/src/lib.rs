@@ -7,7 +7,7 @@
 #![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use precision_core::{Decimal, RoundingMode};
 use alloy_primitives::U256;
 use stylus_sdk::prelude::*;
@@ -178,5 +178,141 @@ impl LendingPool {
     /// Set liquidation bonus (admin only in production)
     pub fn set_liquidation_bonus(&mut self, bonus_bps: U256) {
         self.liquidation_bonus_bps.set(bonus_bps);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ONE_ETH: u128 = 1_000_000_000_000_000_000; // 1e18
+
+    #[test]
+    fn test_u256_to_decimal_conversion() {
+        let one_eth = U256::from(ONE_ETH);
+        let decimal = u256_to_decimal(one_eth);
+        assert_eq!(decimal, Decimal::ONE);
+
+        let half_eth = U256::from(ONE_ETH / 2);
+        let decimal = u256_to_decimal(half_eth);
+        let expected = Decimal::from(5i64).checked_div(Decimal::from(10i64)).unwrap();
+        assert_eq!(decimal, expected);
+    }
+
+    #[test]
+    fn test_decimal_to_u256_conversion() {
+        let one = Decimal::ONE;
+        let u256_val = decimal_to_u256(one);
+        assert_eq!(u256_val, U256::from(ONE_ETH));
+
+        let half = Decimal::from(5i64).checked_div(Decimal::from(10i64)).unwrap();
+        let u256_val = decimal_to_u256(half);
+        assert_eq!(u256_val, U256::from(ONE_ETH / 2));
+    }
+
+    #[test]
+    fn test_u256_decimal_roundtrip() {
+        let original = U256::from(12345u64) * U256::from(ONE_ETH);
+        let decimal = u256_to_decimal(original);
+        let recovered = decimal_to_u256(decimal);
+
+        let diff = if recovered > original { recovered - original } else { original - recovered };
+        assert!(diff < U256::from(1000u64));
+    }
+
+    #[test]
+    fn test_health_factor_computation() {
+        // Test the pure computation: HF = (collateral * threshold) / debt
+        let collateral = Decimal::from(10_000i64);
+        let debt = Decimal::from(5_000i64);
+        let threshold = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap(); // 0.8
+
+        let weighted = collateral.checked_mul(threshold).unwrap();
+        let hf = weighted.checked_div(debt).unwrap();
+
+        // HF = (10000 * 0.8) / 5000 = 1.6
+        let expected = Decimal::from(16i64).checked_div(Decimal::from(10i64)).unwrap();
+        assert_eq!(hf, expected);
+    }
+
+    #[test]
+    fn test_health_factor_unhealthy() {
+        let collateral = Decimal::from(1_000i64);
+        let debt = Decimal::from(1_000i64);
+        let threshold = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap();
+
+        let weighted = collateral.checked_mul(threshold).unwrap();
+        let hf = weighted.checked_div(debt).unwrap();
+
+        // HF = (1000 * 0.8) / 1000 = 0.8
+        let expected = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap();
+        assert_eq!(hf, expected);
+        assert!(hf < Decimal::ONE); // Position is liquidatable
+    }
+
+    #[test]
+    fn test_liquidation_price_computation() {
+        // Liquidation price = debt / (amount * threshold)
+        let debt = Decimal::from(8_000i64);
+        let amount = Decimal::from(10i64);
+        let threshold = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap();
+
+        let denominator = amount.checked_mul(threshold).unwrap();
+        let liq_price = debt.checked_div(denominator).unwrap();
+
+        // LP = 8000 / (10 * 0.8) = 1000
+        assert_eq!(liq_price, Decimal::from(1_000i64));
+    }
+
+    #[test]
+    fn test_max_borrow_computation() {
+        // Max borrow = (collateral * threshold) / target_hf
+        let collateral = Decimal::from(10_000i64);
+        let threshold = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap();
+        let target_hf = Decimal::from(15i64).checked_div(Decimal::from(10i64)).unwrap(); // 1.5
+
+        let weighted = collateral.checked_mul(threshold).unwrap();
+        let max_borrow = weighted.checked_div(target_hf).unwrap();
+
+        // Max = (10000 * 0.8) / 1.5 = 5333.33...
+        let expected_approx = Decimal::from(5333i64);
+        let diff = (max_borrow - expected_approx).abs();
+        assert!(diff < Decimal::ONE);
+    }
+
+    #[test]
+    fn test_liquidation_amounts_computation() {
+        // Collateral to receive = (debt / price) * (1 + bonus)
+        let debt = Decimal::from(1_000i64);
+        let price = Decimal::from(2_000i64);
+        let bonus = Decimal::from(5i64).checked_div(Decimal::from(100i64)).unwrap(); // 5%
+
+        let one_plus_bonus = Decimal::ONE.checked_add(bonus).unwrap();
+        let base_collateral = debt.checked_div(price).unwrap();
+        let total_collateral = base_collateral.checked_mul(one_plus_bonus).unwrap();
+
+        // Collateral = (1000 / 2000) * 1.05 = 0.525
+        let expected = Decimal::from(525i64).checked_div(Decimal::from(1_000i64)).unwrap();
+        assert_eq!(total_collateral, expected);
+    }
+
+    #[test]
+    fn test_precision_core_decimal_ops() {
+        // Verify precision-core Decimal works correctly for DeFi precision
+        let large = Decimal::from(1_000_000_000_000i64);
+        let small = Decimal::from(1i64).checked_div(Decimal::from(1_000_000i64)).unwrap();
+
+        let product = large.checked_mul(small).unwrap();
+        assert_eq!(product, Decimal::from(1_000_000i64));
+    }
+
+    #[test]
+    fn test_basis_points_conversion() {
+        // 8000 bps = 80%
+        let bps = Decimal::from(8000i64);
+        let percentage = bps.checked_div(Decimal::from(10_000i64)).unwrap();
+
+        let expected = Decimal::from(8i64).checked_div(Decimal::from(10i64)).unwrap();
+        assert_eq!(percentage, expected);
     }
 }

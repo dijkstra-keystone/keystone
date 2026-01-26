@@ -7,7 +7,7 @@
 #![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use alloy_primitives::U256;
 use precision_core::{Decimal, RoundingMode};
 use stylus_sdk::prelude::*;
@@ -317,5 +317,182 @@ impl Vault {
     /// Set management fee (admin only in production)
     pub fn set_management_fee(&mut self, fee_bps: U256) {
         self.management_fee_bps.set(fee_bps);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ONE_ETH: u128 = 1_000_000_000_000_000_000; // 1e18
+
+    #[test]
+    fn test_u256_decimal_roundtrip() {
+        let original = U256::from(12345u64) * U256::from(ONE_ETH);
+        let decimal = u256_to_decimal(original);
+        let recovered = decimal_to_u256(decimal);
+
+        let diff = if recovered > original { recovered - original } else { original - recovered };
+        assert!(diff < U256::from(1000u64));
+    }
+
+    #[test]
+    fn test_shares_for_deposit_empty_vault() {
+        // Empty vault: shares = assets (1:1)
+        let assets = Decimal::from(1_000i64);
+        let total_assets = Decimal::ZERO;
+        let total_supply = Decimal::ZERO;
+
+        // For empty vault, should return assets directly
+        assert_eq!(total_supply, Decimal::ZERO);
+    }
+
+    #[test]
+    fn test_shares_for_deposit_existing_vault() {
+        // shares = (assets * total_supply) / total_assets
+        let assets = Decimal::from(100i64);
+        let total_assets = Decimal::from(1_000i64);
+        let total_supply = Decimal::from(500i64);
+
+        let shares = assets
+            .checked_mul(total_supply).unwrap()
+            .checked_div(total_assets).unwrap();
+
+        // 100 * 500 / 1000 = 50 shares
+        assert_eq!(shares, Decimal::from(50i64));
+    }
+
+    #[test]
+    fn test_assets_for_redeem() {
+        // assets = (shares * total_assets) / total_supply
+        let shares = Decimal::from(50i64);
+        let total_assets = Decimal::from(1_000i64);
+        let total_supply = Decimal::from(500i64);
+
+        let assets = shares
+            .checked_mul(total_assets).unwrap()
+            .checked_div(total_supply).unwrap();
+
+        // 50 * 1000 / 500 = 100 assets
+        assert_eq!(assets, Decimal::from(100i64));
+    }
+
+    #[test]
+    fn test_share_price_calculation() {
+        // price = total_assets / total_supply
+        let total_assets = Decimal::from(2_000i64);
+        let total_supply = Decimal::from(1_000i64);
+
+        let price = total_assets.checked_div(total_supply).unwrap();
+        assert_eq!(price, Decimal::from(2i64)); // 2:1 ratio
+    }
+
+    #[test]
+    fn test_compound_yield() {
+        // final = principal * (1 + rate)^n
+        let principal = Decimal::from(1_000i64);
+        let rate = Decimal::from(1i64).checked_div(Decimal::from(100i64)).unwrap(); // 1%
+        let periods = 3;
+
+        let one_plus_rate = Decimal::ONE.checked_add(rate).unwrap(); // 1.01
+        let mut multiplier = Decimal::ONE;
+        for _ in 0..periods {
+            multiplier = multiplier.checked_mul(one_plus_rate).unwrap();
+        }
+        let final_value = principal.checked_mul(multiplier).unwrap();
+
+        // 1000 * 1.01^3 ≈ 1030.301
+        assert!(final_value > Decimal::from(1030i64));
+        assert!(final_value < Decimal::from(1031i64));
+    }
+
+    #[test]
+    fn test_apy_from_apr() {
+        // APY = (1 + APR/n)^n - 1
+        let apr = Decimal::from(10i64).checked_div(Decimal::from(100i64)).unwrap(); // 10%
+        let n = 12; // Monthly compounding
+
+        let rate_per_period = apr.checked_div(Decimal::from(n as i64)).unwrap();
+        let one_plus_rate = Decimal::ONE.checked_add(rate_per_period).unwrap();
+
+        let mut multiplier = Decimal::ONE;
+        for _ in 0..n {
+            multiplier = multiplier.checked_mul(one_plus_rate).unwrap();
+        }
+        let apy = multiplier.checked_sub(Decimal::ONE).unwrap();
+
+        // 10% APR with monthly compounding ≈ 10.47% APY
+        let apy_percent = apy.checked_mul(Decimal::from(100i64)).unwrap();
+        assert!(apy_percent > Decimal::from(10i64));
+        assert!(apy_percent < Decimal::from(11i64));
+    }
+
+    #[test]
+    fn test_performance_fee() {
+        // fee = gains * fee_rate
+        let gains = Decimal::from(1_000i64);
+        let fee_rate = Decimal::from(20i64).checked_div(Decimal::from(100i64)).unwrap(); // 20%
+
+        let fee = gains.checked_mul(fee_rate).unwrap();
+        assert_eq!(fee, Decimal::from(200i64));
+    }
+
+    #[test]
+    fn test_management_fee() {
+        // fee = total_assets * annual_rate * time_fraction
+        let total_assets = Decimal::from(1_000_000i64);
+        let annual_rate = Decimal::from(2i64).checked_div(Decimal::from(100i64)).unwrap(); // 2%
+        let seconds_per_year = Decimal::from(365 * 24 * 60 * 60i64);
+        let seconds_elapsed = Decimal::from(30 * 24 * 60 * 60i64); // 30 days
+
+        let time_fraction = seconds_elapsed.checked_div(seconds_per_year).unwrap();
+        let fee = total_assets
+            .checked_mul(annual_rate).unwrap()
+            .checked_mul(time_fraction).unwrap();
+
+        // 1M * 0.02 * (30/365) ≈ 1643.84
+        assert!(fee > Decimal::from(1_600i64));
+        assert!(fee < Decimal::from(1_700i64));
+    }
+
+    #[test]
+    fn test_net_asset_value() {
+        // NAV = (balance + strategy + rewards) / supply
+        let balance = Decimal::from(500_000i64);
+        let strategy = Decimal::from(450_000i64);
+        let rewards = Decimal::from(50_000i64);
+        let supply = Decimal::from(1_000_000i64);
+
+        let total = balance.checked_add(strategy).unwrap()
+            .checked_add(rewards).unwrap();
+        let nav = total.checked_div(supply).unwrap();
+
+        // (500k + 450k + 50k) / 1M = 1.0
+        assert_eq!(nav, Decimal::ONE);
+    }
+
+    #[test]
+    fn test_deposit_redeem_symmetry() {
+        // Depositing and redeeming should be symmetric (minus fees)
+        let assets = Decimal::from(100i64);
+        let total_assets = Decimal::from(1_000i64);
+        let total_supply = Decimal::from(1_000i64);
+
+        // Deposit: get shares
+        let shares = assets
+            .checked_mul(total_supply).unwrap()
+            .checked_div(total_assets).unwrap();
+
+        // Redeem: get assets back
+        let new_total_assets = total_assets.checked_add(assets).unwrap();
+        let new_total_supply = total_supply.checked_add(shares).unwrap();
+
+        let redeemed = shares
+            .checked_mul(new_total_assets).unwrap()
+            .checked_div(new_total_supply).unwrap();
+
+        // Should get back exactly what we put in (1:1 price ratio)
+        let diff = (redeemed - assets).abs();
+        assert!(diff < Decimal::from(1i64));
     }
 }

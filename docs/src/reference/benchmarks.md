@@ -86,6 +86,105 @@ criterion_group!(benches, bench_addition);
 criterion_main!(benches);
 ```
 
+## Stylus Gas Benchmarks
+
+Keystone Stylus contracts deployed on Arbitrum One.
+
+### Deployed Contracts
+
+| Contract | Address | Size |
+|----------|---------|------|
+| stylus-lending | `0x4dff9348275ac3c24e2d3abf54af61d3ebee1585` | 12.2 KB |
+| stylus-amm | `0x9615cc2f65d8bbe4cdc80343db75a6ec32da93cd` | 16.9 KB |
+| stylus-vault | `0xdaf8f1a5f8025210f07665d4ccf2d2c0622a41fa` | 14.4 KB |
+
+### Measured Gas Usage (Arbitrum One)
+
+| Contract | Function | Gas |
+|----------|----------|-----|
+| stylus-lending | `calculateHealthFactor` | 59,853 |
+| stylus-lending | `isLiquidatable` | 59,851 |
+| stylus-amm | `calculateSpotPrice` | 60,026 |
+| stylus-amm | `calculateSwapOutput` | 62,651 |
+| stylus-amm | `calculateLiquidityMint` | 61,142 |
+| stylus-vault | `calculateSharePrice` | 59,082 |
+| stylus-vault | `calculateSharesForDeposit` | 59,396 |
+| stylus-vault | `calculateAssetsForRedeem` | 59,452 |
+| stylus-vault | `calculateCompoundYield` (30 periods) | 59,904 |
+| stylus-vault | `calculateApyFromApr` (365 compounds) | 75,656 |
+| stylus-vault | `calculatePerformanceFee` | 60,799 |
+| stylus-vault | `calculateManagementFee` | 61,122 |
+
+### Gas Comparison: Stylus vs Solidity (Measured)
+
+Solidity benchmark contract: `0x41d4f095Da18Fd25c28CDbE0532a6fb730bbB9CF`
+
+| Operation | Stylus (gas) | Solidity (gas) | Winner |
+|-----------|--------------|----------------|--------|
+| Share price (1 div) | 58,742 | 22,606 | Solidity 62% cheaper |
+| Shares for deposit (2 ops) | 59,005 | 22,898 | Solidity 61% cheaper |
+| Compound yield (30 loops) | 59,513 | 33,205 | Solidity 44% cheaper |
+| APY from APR (365 loops) | 75,316 | 148,881 | **Stylus 49% cheaper** |
+
+### Key Insight
+
+**Simple arithmetic**: Solidity wins due to lower base overhead.
+
+**Loop-heavy computation**: Stylus wins significantly. As iterations increase, Stylus becomes more efficient because WASM opcodes cost ~100x less than EVM opcodes.
+
+### When to Use Stylus
+
+Use Keystone + Stylus when:
+- Calculations involve many iterations (compound interest, Monte Carlo)
+- 28-digit precision is required (vs Solidity's 18-digit practical limit)
+- Cross-platform determinism matters (same results everywhere)
+
+Use Solidity when:
+- Simple arithmetic only
+- Gas optimization is critical for single operations
+- Existing Solidity codebase
+
+### Break-Even Analysis
+
+Based on measured data, Stylus becomes cheaper at approximately **100+ loop iterations** per call.
+
+### Why Stylus is Cheaper
+
+1. **WASM Execution**: WASM opcodes cost ~1/100th of EVM opcodes
+2. **No Storage Overhead**: Pure computation functions avoid SLOAD/SSTORE
+3. **Efficient Loops**: Iteration-heavy calculations (compound interest) benefit most
+4. **Native Integer Ops**: 128-bit arithmetic is native in WASM
+
+### Running Gas Benchmarks
+
+Install Foundry:
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Estimate gas for a call:
+```bash
+cast estimate 0x4dff9348275ac3c24e2d3abf54af61d3ebee1585 \
+  "calculateHealthFactor(uint256,uint256)(uint256)" \
+  10000000000000000000000 5000000000000000000000 \
+  --rpc-url https://arb1.arbitrum.io/rpc
+```
+
+### Activation Costs
+
+One-time costs paid at deployment:
+
+| Contract | Activation Fee |
+|----------|---------------|
+| stylus-lending | 0.000090 ETH |
+| stylus-amm | 0.000103 ETH |
+| stylus-vault | 0.000099 ETH |
+
+After activation, calls use standard Arbitrum gas pricing.
+
+---
+
 ## WASM Performance
 
 WASM operations include JS-WASM boundary overhead:
