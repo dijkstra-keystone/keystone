@@ -6,6 +6,7 @@ members = [
     "crates/risk-metrics",
     "crates/keystone-defi",
     "crates/wasm-bindings",
+    "backend",
 ]
 
 [workspace.package]
