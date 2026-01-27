@@ -19,6 +19,9 @@
 - [Interest](./financial/interest.md)
 - [Time Value of Money](./financial/time-value.md)
 - [Percentages](./financial/percentages.md)
+- [Options Pricing](./financial/options.md)
+- [AMM & DEX](./financial/amm.md)
+- [Derivatives](./financial/derivatives.md)
 
 # Risk Metrics
 
@@ -35,6 +38,10 @@
 
 - [Integration Guide](./stylus/integration.md)
 - [Example Contracts](./stylus/examples.md)
+
+# Unified SDK
+
+- [keystone-defi](./sdk/keystone-defi.md)
 
 # Reference
 
