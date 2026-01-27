@@ -3,7 +3,15 @@
 Deterministic precision arithmetic for financial computation and verifiable systems.
 
 [![CI](https://github.com/dijkstra-keystone/keystone/actions/workflows/ci.yml/badge.svg)](https://github.com/dijkstra-keystone/keystone/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/precision-core.svg)](https://crates.io/crates/precision-core)
+[![docs.rs](https://docs.rs/precision-core/badge.svg)](https://docs.rs/precision-core)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
+
+## Why Keystone?
+
+DeFi protocols make critical decisions—liquidations, pricing, risk assessments—based on mathematical calculations. When your laptop, a validator node, and a WASM frontend compute the same formula and get *different* results due to floating-point inconsistencies, bad things happen.
+
+Keystone guarantees **bit-identical results** across x86, ARM, and WASM. No floating-point surprises. No platform-dependent rounding. The same input produces the same output, every time, everywhere.
 
 ## Overview
 
@@ -27,6 +35,14 @@ Ready-to-deploy examples for Arbitrum Stylus:
 | [stylus-lending](examples/stylus-lending) | Health factor and liquidation calculations |
 | [stylus-amm](examples/stylus-amm) | Constant product AMM math |
 | [stylus-vault](examples/stylus-vault) | ERC4626-style vault calculations |
+
+### Deployed on Arbitrum One
+
+| Contract | Address |
+|----------|---------|
+| stylus-lending | [`0x4dff9348275ac3c24e2d3abf54af61d3ebee1585`](https://arbiscan.io/address/0x4dff9348275ac3c24e2d3abf54af61d3ebee1585) |
+| stylus-amm | [`0x9615cc2f65d8bbe4cdc80343db75a6ec32da93cd`](https://arbiscan.io/address/0x9615cc2f65d8bbe4cdc80343db75a6ec32da93cd) |
+| stylus-vault | [`0xdaf8f1a5f8025210f07665d4ccf2d2c0622a41fa`](https://arbiscan.io/address/0xdaf8f1a5f8025210f07665d4ccf2d2c0622a41fa) |
 
 ## Features
 
