@@ -4,11 +4,12 @@ members = [
     "crates/precision-core",
     "crates/financial-calc",
     "crates/risk-metrics",
+    "crates/keystone-defi",
     "crates/wasm-bindings",
 ]
 
 [workspace.package]
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/dijkstra-keystone/keystone"

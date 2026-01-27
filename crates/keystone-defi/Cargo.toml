@@ -1,0 +1,22 @@
+[package]
+name = "keystone-defi"
+version = "0.1.0-alpha.3"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Unified DeFi computation SDK for Arbitrum Stylus"
+repository = "https://github.com/dijkstra-keystone/keystone"
+keywords = ["defi", "arbitrum", "stylus", "precision", "financial"]
+categories = ["finance", "no-std", "wasm"]
+readme = "README.md"
+
+[dependencies]
+precision-core = { path = "../precision-core", version = "0.1.0-alpha.3", default-features = false }
+financial-calc = { path = "../financial-calc", version = "0.1.0-alpha.3", default-features = false }
+risk-metrics = { path = "../risk-metrics", version = "0.1.0-alpha.3", default-features = false }
+
+[features]
+default = []
+std = ["precision-core/std", "financial-calc/std", "risk-metrics/std"]
+
+[package.metadata.docs.rs]
+all-features = true

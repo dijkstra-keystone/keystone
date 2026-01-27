@@ -21,9 +21,9 @@ wasm-opt = ["-O", "--enable-bulk-memory"]
 default = []
 
 [dependencies]
-precision-core = { path = "../precision-core", version = "0.1.0-alpha.1" }
-financial-calc = { path = "../financial-calc", version = "0.1.0-alpha.1" }
-risk-metrics = { path = "../risk-metrics", version = "0.1.0-alpha.1" }
+precision-core = { path = "../precision-core", version = "0.1.0-alpha.3" }
+financial-calc = { path = "../financial-calc", version = "0.1.0-alpha.3" }
+risk-metrics = { path = "../risk-metrics", version = "0.1.0-alpha.3" }
 wasm-bindgen = "0.2"
 serde = { workspace = true }
 serde-wasm-bindgen = "0.6"

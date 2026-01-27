@@ -13,8 +13,12 @@
 //! - **Options pricing** (Black-Scholes model, Greeks, implied volatility)
 //! - **Term structures** (yield curves, discount factors, forward rates)
 //! - **Day count conventions** (Actual/360, 30/360, etc.)
+//! - **Derivatives** (perpetual futures, funding rates, liquidations)
+//! - **AMM** (constant product, concentrated liquidity, impermanent loss)
 
+pub mod amm;
 pub mod day_count;
+pub mod derivatives;
 pub mod interpolation;
 mod interest;
 pub mod options;
@@ -40,3 +44,17 @@ pub use solver::{
     SolverResult, DEFAULT_MAX_ITER,
 };
 pub use time_value::{future_value, net_present_value, present_value};
+pub use derivatives::{
+    calculate_average_entry_price, calculate_breakeven_price, calculate_effective_leverage,
+    calculate_funding_payment, calculate_funding_rate, calculate_liquidation_distance,
+    calculate_liquidation_price, calculate_margin_ratio, calculate_max_position_size, calculate_pnl,
+    calculate_pnl_percentage, calculate_required_collateral, calculate_roe, FundingParams,
+    PerpPosition,
+};
+pub use amm::{
+    calculate_amounts_from_liquidity, calculate_impermanent_loss, calculate_liquidity_burn,
+    calculate_liquidity_from_amounts, calculate_liquidity_mint, calculate_position_value,
+    calculate_price_impact, calculate_spot_price, calculate_swap_input, calculate_swap_output,
+    sqrt_price_to_tick, tick_spacing_to_fee_bps, tick_to_sqrt_price, ConcentratedPosition,
+    MAX_TICK, MIN_TICK, TICK_SPACING_HIGH, TICK_SPACING_LOW, TICK_SPACING_MEDIUM,
+};

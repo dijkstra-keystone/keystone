@@ -16,7 +16,7 @@ default = []
 std = ["precision-core/std"]
 
 [dependencies]
-precision-core = { path = "../precision-core", version = "0.1.0-alpha.1" }
+precision-core = { path = "../precision-core", version = "0.1.0-alpha.3" }
 serde = { workspace = true }
 
 [dev-dependencies]
