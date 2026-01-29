@@ -28,3 +28,6 @@ pub use tolerance::{
 
 #[cfg(feature = "proptest")]
 mod proptest_impl;
+
+#[cfg(kani)]
+mod kani_proofs;
