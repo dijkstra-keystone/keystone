@@ -1,0 +1,6 @@
+[contract]
+name = "stylus-oracle-example"
+
+[deployment]
+# Arbitrum Sepolia
+rpc_url = "https://sepolia-rollup.arbitrum.io/rpc"

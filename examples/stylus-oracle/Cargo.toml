@@ -1,0 +1,39 @@
+[package]
+name = "stylus-oracle-example"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[dependencies]
+precision-core = { path = "../../crates/precision-core", default-features = false }
+risk-metrics = { path = "../../crates/risk-metrics", default-features = false }
+stylus-sdk = { version = "=0.9.2", default-features = false, features = ["stylus-proc"] }
+alloy-primitives = "=0.8.20"
+ruint = ">=1.12.3, <1.17"
+# RedStone SDK for Stylus (when available on crates.io)
+# redstone-stylus = "0.1"
+
+[dev-dependencies]
+motsu = "0.10"
+
+[features]
+default = ["mini-alloc"]
+mini-alloc = ["stylus-sdk/mini-alloc"]
+export-abi = ["stylus-sdk/export-abi"]
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[[bin]]
+name = "stylus-oracle-example"
+path = "src/main.rs"
+required-features = ["export-abi"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
