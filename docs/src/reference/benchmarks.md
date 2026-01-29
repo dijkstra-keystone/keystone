@@ -40,6 +40,38 @@ Performance characteristics of Keystone operations measured with Criterion.
 | collateral_ratio | ~40 |
 | max_borrowable | ~55 |
 
+## precision-core vs rust_decimal
+
+Measured with Criterion.rs on identical hardware. precision-core wraps rust_decimal
+with checked arithmetic, overflow detection, and formal verification boundaries.
+
+| Operation | precision-core (ns) | rust_decimal (ns) | Overhead |
+|-----------|--------------------:|-------------------:|---------:|
+| Addition | 7.3 | 7.0 | ~4% |
+| Subtraction | 8.0 | 7.5 | ~7% |
+| Multiplication | 8.7 | 7.7 | ~13% |
+| Division | 32.8 | 32.4 | ~1% |
+| mul_div (compound) | 22.7 | 20.4 | ~11% |
+| Compound interest (12×) | 127.0 | 105.0 | ~21% |
+| Health factor (mul+div) | 23.4 | 21.2 | ~10% |
+| Swap output (3 ops) | 73.8 | 69.9 | ~6% |
+| Large value mul | 16.7 | 16.1 | ~4% |
+| Large value div | 70.7 | 69.4 | ~2% |
+
+The wrapper overhead ranges from 1-13% for individual operations and 6-21% for
+compound operations. This cost buys:
+
+- Checked arithmetic that returns `Option` instead of panicking
+- Formal verification via Kani proof harnesses
+- Consistent error types (`ArithmeticError`)
+- DeFi-specific operations (health factor, swap math)
+
+Run the comparison benchmark:
+
+```bash
+cargo bench --package precision-core --bench comparison
+```
+
 ## Running Benchmarks
 
 ```bash

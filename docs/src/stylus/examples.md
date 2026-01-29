@@ -1,6 +1,6 @@
 # Example Contracts
 
-Keystone includes three production-ready Stylus example contracts demonstrating precision arithmetic for different DeFi use cases.
+Keystone includes five Stylus example contracts demonstrating precision arithmetic for different DeFi use cases.
 
 ## Deployed Contracts (Arbitrum One)
 
@@ -140,6 +140,55 @@ let apy_bps = contract.calculate_apy_from_apr(
 - ERC4626 vaults
 - Yearn-style yield aggregators
 - Pendle, Jones DAO on Arbitrum
+
+---
+
+## stylus-options
+
+**Location:** `examples/stylus-options/`
+
+On-chain Black-Scholes options pricing with 128-bit decimal precision.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `price_call` | European call option price (Black-Scholes) |
+| `price_put` | European put option price |
+| `call_option_greeks` | Delta, Gamma, Theta, Vega, Rho for calls |
+| `put_option_greeks` | Greeks for puts |
+| `calculate_iv` | Implied volatility from market price |
+| `put_call_parity_check` | Verify C - P = S - Ke^(-rT) |
+
+### Target Protocols
+
+- Dopex (Arbitrum options)
+- Rysk Finance (options AMM)
+- Any protocol requiring on-chain `exp()`, `ln()`, `sqrt()` for BSM pricing
+
+---
+
+## stylus-oracle
+
+**Location:** `examples/stylus-oracle/`
+
+RedStone oracle integration for price-aware DeFi calculations.
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `calculate_health_factor_with_prices` | Health factor using live oracle prices |
+| `calculate_liquidation_price_with_oracle` | Oracle-based liquidation trigger |
+| `calculate_max_borrow_with_prices` | Max borrow with real-time pricing |
+| `is_liquidatable_with_prices` | Liquidation status with live data |
+| `calculate_twap` | Time-weighted average price |
+| `calculate_price_deviation` | Anomaly detection vs median |
+
+### Target Protocols
+
+- Any DeFi protocol using RedStone pull-based oracles on Arbitrum
+- Cross-VM interoperability between WASM and EVM contracts
 
 ---
 

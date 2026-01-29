@@ -35,9 +35,12 @@ edition = "2021"
 
 [dependencies]
 precision-core = { version = "0.1", default-features = false }
-stylus-sdk = "=0.9.0"
+stylus-sdk = { version = "=0.9.2", default-features = false, features = ["stylus-proc"] }
 alloy-primitives = "=0.8.20"
 ruint = ">=1.12.3, <1.17"
+
+[dev-dependencies]
+motsu = "0.10"
 
 [features]
 default = ["mini-alloc"]
@@ -202,6 +205,49 @@ ERC4626-style vault calculations: share price, compound yield, APY conversion.
 cd examples/stylus-vault
 cargo stylus check
 ```
+
+### stylus-oracle
+
+RedStone oracle integration: price-aware health factor, liquidation checks, TWAP.
+
+```bash
+cd examples/stylus-oracle
+cargo stylus check
+```
+
+## Testing with Motsu
+
+[Motsu](https://crates.io/crates/motsu) provides unit testing for Stylus contracts without a blockchain runtime:
+
+```rust
+use motsu::prelude::*;
+use alloy_primitives::{Address, U256};
+
+#[motsu::test]
+fn test_health_factor(contract: Contract<LendingPool>) {
+    let alice = Address::random();
+
+    contract.sender(alice).set_liquidation_threshold(U256::from(8000u64));
+
+    let collateral = U256::from(10_000u64) * U256::from(10u128.pow(18));
+    let debt = U256::from(5_000u64) * U256::from(10u128.pow(18));
+
+    let hf = contract
+        .sender(alice)
+        .calculate_health_factor(collateral, debt)
+        .expect("should calculate");
+
+    assert!(hf > U256::from(10u128.pow(18))); // HF > 1.0
+}
+```
+
+Run tests:
+
+```bash
+cargo test
+```
+
+Motsu requires `stylus-sdk` without the `hostio-caching` feature.
 
 ## Best Practices
 
